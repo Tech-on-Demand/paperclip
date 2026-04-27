@@ -1,6 +1,6 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
-import { goals } from "@paperclipai/db";
+import { goals, issues } from "@paperclipai/db";
 
 type GoalReader = Pick<Db, "select">;
 
@@ -71,7 +71,10 @@ export function goalService(db: Db) {
         .then((rows) => rows[0] ?? null),
 
     remove: async (id: string) => {
-      // Delete child goals first to avoid FK constraint violation
+      // Unlink issues first to avoid FK constraint violation
+      await db.update(issues).set({ goalId: null }).where(eq(issues.goalId, id));
+      
+      // Delete child goals first
       await db.delete(goals).where(eq(goals.parentId, id));
       
       const deleted = await db
